@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACM Gruas — Sistema de Gestão</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0A0A0F;
+  --surface: #111118;
+  --surface2: #1A1A24;
+  --surface3: #22222F;
+  --border: #2A2A3A;
+  --text: #F0EEF8;
+  --muted: #7A7890;
+  --accent: #7C3AED;
+  --accent2: #A855F7;
+  --accent-glow: rgba(124,58,237,0.3);
+  --green: #10B981;
+  --green-dim: rgba(16,185,129,0.15);
+  --red: #EF4444;
+  --red-dim: rgba(239,68,68,0.15);
+  --amber: #F59E0B;
+  --amber-dim: rgba(245,158,11,0.15);
+  --blue: #3B82F6;
+  --blue-dim: rgba(59,130,246,0.15);
+  --r: 12px;
+  --r-sm: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+/* LOADING */
+#loading-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+#loading-overlay.hidden { display: none; }
+.spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent2); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* LOGIN */
+#login-screen { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 100; align-items: center; justify-content: center; }
+#login-screen.visible { display: flex; }
+.login-wrap { width: 100%; max-width: 400px; padding: 20px; }
+.login-logo { font-size: 13px; font-weight: 700; letter-spacing: 0.15em; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; font-family: 'JetBrains Mono', monospace; }
+.login-title { font-size: 32px; font-weight: 800; margin-bottom: 4px; }
+.login-title span { color: var(--accent2); }
+.login-sub { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
+.login-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.login-field label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.login-field input { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px 14px; font-family: 'Syne', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color 0.2s; }
+.login-field input:focus { border-color: var(--accent2); }
+.login-btn { width: 100%; padding: 13px; background: var(--accent); border: none; border-radius: var(--r-sm); color: #fff; font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: background 0.2s, transform 0.1s; }
+.login-btn:hover { background: var(--accent2); }
+.login-btn:active { transform: scale(0.98); }
+.login-err { background: var(--red-dim); border: 1px solid var(--red); color: var(--red); border-radius: var(--r-sm); padding: 10px 14px; font-size: 13px; margin-top: 10px; display: none; }
+.login-err.visible { display: block; }
+
+/* APP */
+#app { display: none; }
+#app.visible { display: flex; min-height: 100vh; }
+
+/* SIDEBAR */
+.sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+.sidebar-logo { padding: 24px 20px 20px; border-bottom: 1px solid var(--border); }
+.sidebar-logo-tag { font-size: 10px; font-weight: 600; letter-spacing: 0.15em; color: var(--accent2); text-transform: uppercase; font-family: 'JetBrains Mono', monospace; margin-bottom: 4px; }
+.sidebar-logo-name { font-size: 20px; font-weight: 800; }
+.sidebar-logo-name span { color: var(--accent2); }
+.sidebar-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--r-sm); cursor: pointer; font-size: 14px; font-weight: 500; color: var(--muted); transition: all 0.15s; border: none; background: none; width: 100%; text-align: left; }
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active { background: var(--accent-glow); color: var(--accent2); border: 1px solid rgba(124,58,237,0.3); }
+.nav-icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+.nav-section { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: var(--border); text-transform: uppercase; padding: 12px 12px 4px; font-family: 'JetBrains Mono', monospace; }
+.sidebar-footer { padding: 16px 12px; border-top: 1px solid var(--border); }
+.sync-dot { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-bottom: 10px; }
+.sync-dot .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+.sync-dot .dot.saving { background: var(--amber); animation: pulse 1s infinite; }
+.sync-dot .dot.error { background: var(--red); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.logout-btn { width: 100%; padding: 8px; background: none; border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--muted); font-family: 'Syne', sans-serif; font-size: 13px; cursor: pointer; transition: all 0.15s; }
+.logout-btn:hover { border-color: var(--red); color: var(--red); }
+
+/* MAIN */
+.main-area { flex: 1; overflow-y: auto; }
+.page { display: none; padding: 32px; }
+.page.active { display: block; }
+.page-header { margin-bottom: 28px; }
+.page-header h1 { font-size: 26px; font-weight: 800; margin-bottom: 4px; }
+.page-header p { font-size: 14px; color: var(--muted); }
+.page-date { font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--muted); margin-top: 4px; }
+
+/* CARDS */
+.metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 28px; }
+.metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; position: relative; overflow: hidden; }
+.metric-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+.metric-card.green::before { background: var(--green); }
+.metric-card.red::before { background: var(--red); }
+.metric-card.amber::before { background: var(--amber); }
+.metric-card.blue::before { background: var(--blue); }
+.metric-card.purple::before { background: var(--accent2); }
+.metric-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; font-family: 'JetBrains Mono', monospace; }
+.metric-value { font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+.metric-value.green { color: var(--green); }
+.metric-value.red { color: var(--red); }
+.metric-value.amber { color: var(--amber); }
+.metric-value.blue { color: var(--blue); }
+.metric-value.purple { color: var(--accent2); }
+.metric-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+/* TABLE */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; margin-bottom: 20px; }
+.card-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--border); }
+.card-title { font-size: 15px; font-weight: 700; }
+.card-body { padding: 20px; }
+table.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.data-table th { text-align: left; padding: 8px 12px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-family: 'JetBrains Mono', monospace; border-bottom: 1px solid var(--border); }
+table.data-table td { padding: 11px 12px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+table.data-table tr:last-child td { border-bottom: none; }
+table.data-table tr:hover td { background: var(--surface2); }
+.mono { font-family: 'JetBrains Mono', monospace; }
+
+/* BADGES */
+.badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 99px; font-family: 'JetBrains Mono', monospace; }
+.badge-green { background: var(--green-dim); color: var(--green); }
+.badge-red { background: var(--red-dim); color: var(--red); }
+.badge-amber { background: var(--amber-dim); color: var(--amber); }
+.badge-blue { background: var(--blue-dim); color: var(--blue); }
+.badge-purple { background: var(--accent-glow); color: var(--accent2); }
+
+/* BUTTONS */
+.btn { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; padding: 9px 18px; border-radius: var(--r-sm); cursor: pointer; border: none; transition: all 0.15s; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-ghost { background: none; border: 1px solid var(--border); color: var(--text); }
+.btn-ghost:hover { border-color: var(--muted); background: var(--surface2); }
+.btn-danger { background: none; border: 1px solid var(--border); color: var(--red); }
+.btn-danger:hover { background: var(--red-dim); border-color: var(--red); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-icon { width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; background: none; border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer; font-size: 14px; color: var(--muted); transition: all 0.15s; }
+.btn-icon:hover { background: var(--surface2); color: var(--text); }
+
+/* FORMS */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.form-group input, .form-group select, .form-group textarea {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+  padding: 10px 12px; font-family: 'Syne', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color 0.2s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent2); }
+.form-group textarea { min-height: 80px; resize: vertical; }
+.form-group select option { background: var(--surface2); }
+.full { grid-column: 1 / -1; }
+.form-actions { display: flex; gap: 10px; margin-top: 20px; }
+.form-msg { font-size: 13px; padding: 10px 14px; border-radius: var(--r-sm); margin-top: 12px; }
+.form-msg.ok { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); }
+.form-msg.err { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); }
+
+/* MODAL */
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 500; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+.modal-bg.open { display: flex; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 28px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
+.modal-title { font-size: 18px; font-weight: 800; margin-bottom: 20px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+
+/* TABS */
+.tab-bar { display: flex; gap: 4px; background: var(--surface2); border-radius: var(--r-sm); padding: 4px; margin-bottom: 20px; }
+.tab-btn { flex: 1; padding: 8px 12px; border: none; background: none; border-radius: 6px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; transition: all 0.15s; }
+.tab-btn.active { background: var(--surface); color: var(--text); }
+
+/* FILTER BAR */
+.filter-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+.filter-bar input, .filter-bar select { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px 12px; font-family: 'Syne', sans-serif; font-size: 13px; color: var(--text); outline: none; }
+.filter-bar input:focus, .filter-bar select:focus { border-color: var(--accent2); }
+.filter-bar input[type=text] { flex: 1; min-width: 160px; }
+
+/* EMPTY STATE */
+.empty { text-align: center; padding: 48px 20px; color: var(--muted); }
+.empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+.empty-text { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.empty-sub { font-size: 13px; }
+
+/* FLUXO COLORS */
+.entrada { color: var(--green); }
+.saida { color: var(--red); }
+
+/* ROTA CARD */
+.rota-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; cursor: pointer; }
+.rota-header:hover { background: var(--surface2); }
+.rota-name { font-size: 15px; font-weight: 700; }
+.rota-meta { font-size: 12px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.rota-body { padding: 0 18px 16px; }
+.rota-total-row { display: flex; gap: 20px; padding: 12px 0; border-top: 1px solid var(--border); margin-top: 8px; }
+.rota-total-item { display: flex; flex-direction: column; gap: 2px; }
+.rota-total-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.rota-total-val { font-size: 16px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+
+/* DESPESAS CATEGORIAS */
+.desp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.desp-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; cursor: pointer; transition: border-color 0.15s; }
+.desp-card:hover, .desp-card.selected { border-color: var(--accent2); }
+.desp-card-icon { font-size: 22px; margin-bottom: 8px; }
+.desp-card-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.desp-card-val { font-size: 18px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: var(--red); }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .page { padding: 16px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .full { grid-column: 1; }
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div style="font-size:13px;color:var(--muted);font-family:'JetBrains Mono',monospace">Carregando sistema...</div>
+</div>
+
+<div id="login-screen">
+  <div class="login-wrap">
+    <div class="login-logo">ACM Sistema</div>
+    <div class="login-title">ACM <span>Gruas</span></div>
+    <div class="login-sub">Gestão de máquinas de pelúcia</div>
+    <div class="login-field"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@email.com" /></div>
+    <div class="login-field"><label>Senha</label><input type="password" id="login-senha" placeholder="••••••••" onkeydown="if(event.key==='Enter')fazerLogin()" /></div>
+    <button class="login-btn" onclick="fazerLogin()">Entrar</button>
+    <div class="login-err" id="login-err">E-mail ou senha incorretos.</div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-tag">ACM Sistema</div>
+      <div class="sidebar-logo-name">ACM <span>Gruas</span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Principal</div>
+      <button class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+        <span class="nav-icon">📊</span> Dashboard
+      </button>
+      <button class="nav-item" onclick="showPage('fluxo')" id="nav-fluxo">
+        <span class="nav-icon">💰</span> Fluxo de Caixa
+      </button>
+      <div class="nav-section">Operação</div>
+      <button class="nav-item" onclick="showPage('rotas')" id="nav-rotas">
+        <span class="nav-icon">🗺️</span> Rotas
+      </button>
+      <button class="nav-item" onclick="showPage('despesas')" id="nav-despesas">
+        <span class="nav-icon">📋</span> Despesas
+      </button>
+      <div class="nav-section">Cadastros</div>
+      <button class="nav-item" onclick="showPage('pontos')" id="nav-pontos">
+        <span class="nav-icon">📍</span> Pontos / Máquinas
+      </button>
+      <button class="nav-item" onclick="showPage('pelucias')" id="nav-pelucias">
+        <span class="nav-icon">🧸</span> Compras Pelúcia
+      </button>
+      <button class="nav-item" onclick="showPage('salarios')" id="nav-salarios">
+        <span class="nav-icon">👤</span> Salários
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sync-dot" id="sync-indicator"><div class="dot" id="sync-dot"></div><span id="sync-text">salvo</span></div>
+      <button class="logout-btn" onclick="fazerLogout()">Sair</button>
+    </div>
+  </div>
+
+  <div class="main-area">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <h1>Dashboard</h1>
+        <div class="page-date" id="dash-date"></div>
+      </div>
+      <div class="metrics-grid" id="dash-metrics"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Últimas Movimentações</span><button class="btn btn-ghost btn-sm" onclick="showPage('fluxo')">Ver todas</button></div>
+          <div id="dash-fluxo-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Rotas Recentes</span><button class="btn btn-ghost btn-sm" onclick="showPage('rotas')">Ver todas</button></div>
+          <div id="dash-rotas-list"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Top Pontos — Último Mês</span></div>
+        <div id="dash-pontos-list"></div>
+      </div>
+    </div>
+
+    <!-- FLUXO DE CAIXA -->
+    <div class="page" id="page-fluxo">
+      <div class="page-header">
+        <h1>Fluxo de Caixa</h1>
+        <p>Entradas e saídas de caixa</p>
+      </div>
+      <div class="metrics-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px;" id="fluxo-metrics"></div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px;">
+        <div class="card" style="flex:1;min-width:300px;">
+          <div class="card-header"><span class="card-title">➕ Novo Lançamento</span></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group"><label>Tipo *</label>
+                <select id="f-tipo">
+                  <option value="entrada">💚 Entrada</option>
+                  <option value="saida">🔴 Saída</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Data *</label><input type="date" id="f-data" /></div>
+              <div class="form-group"><label>Valor (R$) *</label><input type="number" id="f-valor" placeholder="0,00" min="0" step="0.01" /></div>
+              <div class="form-group"><label>Categoria</label>
+                <select id="f-categoria">
+                  <option value="">Geral</option>
+                  <option value="coleta_rota">Coleta de Rota</option>
+                  <option value="compra_pelucia">Compra de Pelúcia</option>
+                  <option value="combustivel">Combustível</option>
+                  <option value="manutencao">Manutenção</option>
+                  <option value="salario">Salário</option>
+                  <option value="juros">Juros</option>
+                  <option value="emprestimo">Empréstimo</option>
+                  <option value="outros">Outros</option>
+                </select>
+              </div>
+              <div class="form-group full"><label>Descrição *</label><input type="text" id="f-desc" placeholder="Ex: Coleta rota GPVA..." /></div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary" onclick="salvarFluxo()">✓ Lançar</button>
+              <button class="btn btn-ghost" onclick="limparFluxoForm()">Limpar</button>
+            </div>
+            <div id="fluxo-msg"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Histórico</span>
+          <div style="display:flex;gap:8px;">
+            <input type="month" id="fluxo-filter-mes" onchange="renderFluxo()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:6px 10px;color:var(--text);font-family:'Syne',sans-serif;font-size:13px;outline:none;" />
+            <select id="fluxo-filter-tipo" onchange="renderFluxo()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:6px 10px;color:var(--text);font-family:'Syne',sans-serif;font-size:13px;outline:none;">
+              <option value="">Todos</option>
+              <option value="entrada">Entradas</option>
+              <option value="saida">Saídas</option>
+            </select>
+          </div>
+        </div>
+        <div id="fluxo-list"></div>
+      </div>
+    </div>
+
+    <!-- ROTAS -->
+    <div class="page" id="page-rotas">
+      <div class="page-header">
+        <h1>Rotas</h1>
+        <p>Registro de visitas e coletas por ponto</p>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-primary" onclick="abrirModalRota()">+ Nova Visita</button>
+        <select id="rota-filter-rota" onchange="renderRotas()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 12px;color:var(--text);font-family:'Syne',sans-serif;font-size:13px;outline:none;">
+          <option value="">Todas as rotas</option>
+          <option>PRUDE</option><option>IRATI</option><option>PG</option><option>GPVA</option>
+        </select>
+        <input type="month" id="rota-filter-mes" onchange="renderRotas()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 12px;color:var(--text);font-family:'Syne',sans-serif;font-size:13px;outline:none;" />
+        <div style="margin-left:auto;display:flex;gap:16px;" id="rota-summary"></div>
+      </div>
+      <div id="rotas-list"></div>
+    </div>
+
+    <!-- DESPESAS -->
+    <div class="page" id="page-despesas">
+      <div class="page-header">
+        <h1>Despesas</h1>
+        <p>Controle por categoria</p>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:20px;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="abrirModalDespesa()">+ Nova Despesa</button>
+        <input type="month" id="desp-filter-mes" onchange="renderDespesas()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 12px;color:var(--text);font-family:'Syne',sans-serif;font-size:13px;outline:none;" />
+      </div>
+      <div class="desp-grid" id="desp-categorias"></div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Lançamentos do Mês</span></div>
+        <div id="desp-list"></div>
+      </div>
+    </div>
+
+    <!-- PONTOS -->
+    <div class="page" id="page-pontos">
+      <div class="page-header"><h1>Pontos / Máquinas</h1><p>Cadastro dos estabelecimentos e configurações</p></div>
+      <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="abrirModalPonto()">+ Novo Ponto</button>
+        <input type="text" id="ponto-search" oninput="renderPontos()" placeholder="Buscar ponto..." style="flex:1;min-width:160px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 12px;color:var(--text);font-family:'Syne',sans-serif;font-size:13px;outline:none;" />
+        <select id="ponto-filter-rota" onchange="renderPontos()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 12px;color:var(--text);font-family:'Syne',sans-serif;font-size:13px;outline:none;">
+          <option value="">Todas as rotas</option>
+          <option>PRUDE</option><option>IRATI</option><option>PG</option><option>GPVA</option>
+        </select>
+      </div>
+      <div class="card">
+        <div id="pontos-list"></div>
+      </div>
+    </div>
+
+    <!-- PELÚCIAS -->
+    <div class="page" id="page-pelucias">
+      <div class="page-header"><h1>Compras de Pelúcia</h1><p>Histórico de compras e custo unitário</p></div>
+      <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-primary" onclick="abrirModalPelucia()">+ Nova Compra</button>
+        <div style="margin-left:auto;" id="pelucia-summary"></div>
+      </div>
+      <div class="metrics-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px;" id="pelucia-metrics"></div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Histórico de Compras</span></div>
+        <div id="pelucias-list"></div>
+      </div>
+    </div>
+
+    <!-- SALÁRIOS -->
+    <div class="page" id="page-salarios">
+      <div class="page-header"><h1>Salários</h1><p>Pagamentos de sócios e funcionários</p></div>
+      <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="abrirModalSalario()">+ Novo Pagamento</button>
+        <input type="month" id="sal-filter-mes" onchange="renderSalarios()" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 12px;color:var(--text);font-family:'Syne',sans-serif;font-size:13px;outline:none;" />
+      </div>
+      <div class="metrics-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;" id="sal-metrics"></div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Histórico de Pagamentos</span></div>
+        <div id="salarios-list"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL ROTA -->
+<div class="modal-bg" id="modal-rota">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-title" id="modal-rota-title">Nova Visita</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Data *</label><input type="date" id="r-data" /></div>
+      <div class="form-group"><label>Rota *</label>
+        <select id="r-rota">
+          <option value="">Selecionar...</option>
+          <option>PRUDE</option><option>IRATI</option><option>PG</option><option>GPVA</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Estabelecimento *</label>
+        <select id="r-estabelecimento">
+          <option value="">Selecionar ponto...</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Faturamento (R$) *</label><input type="number" id="r-fat" placeholder="0" min="0" step="1" oninput="calcRotaLucro()" /></div>
+      <div class="form-group"><label>Comissão (R$)</label><input type="number" id="r-com" placeholder="0" min="0" step="1" oninput="calcRotaLucro()" /></div>
+      <div class="form-group"><label>Pelúcias saídas *</label><input type="number" id="r-pel" placeholder="0" min="0" step="1" oninput="calcRotaLucro()" /></div>
+      <div class="form-group"><label>Custo pelúcias (R$)</label><input type="number" id="r-custopel" placeholder="0" min="0" step="0.01" oninput="calcRotaLucro()" /></div>
+      <div class="form-group"><label>Relógio Dinheiro</label><input type="number" id="r-reldin" placeholder="Ex: 42500" /></div>
+      <div class="form-group"><label>Relógio Pelúcias</label><input type="number" id="r-relpel" placeholder="Ex: 1500" /></div>
+      <div class="form-group"><label>Sobra / Falta (R$)</label><input type="number" id="r-sobra" placeholder="0" step="0.01" /></div>
+      <div class="form-group full" style="background:var(--surface2);border-radius:var(--r-sm);padding:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div><div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Lucro Calc.</div><div style="font-size:18px;font-weight:800;color:var(--green);font-family:'JetBrains Mono',monospace" id="r-lucro-calc">R$ 0</div></div>
+        <div><div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Média/Pelúcia</div><div style="font-size:18px;font-weight:800;color:var(--accent2);font-family:'JetBrains Mono',monospace" id="r-media-calc">R$ 0</div></div>
+        <div><div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">% Comissão</div><div style="font-size:18px;font-weight:800;color:var(--amber);font-family:'JetBrains Mono',monospace" id="r-pct-calc">0%</div></div>
+      </div>
+      <div class="form-group full"><label>Observação</label><textarea id="r-obs" placeholder="Notas sobre a visita..."></textarea></div>
+    </div>
+    <div id="rota-msg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="salvarRota()">✓ Salvar Visita</button>
+      <button class="btn btn-ghost" onclick="fecharModal('modal-rota')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DESPESA -->
+<div class="modal-bg" id="modal-despesa">
+  <div class="modal">
+    <div class="modal-title">Nova Despesa</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Data *</label><input type="date" id="d-data" /></div>
+      <div class="form-group"><label>Valor (R$) *</label><input type="number" id="d-valor" placeholder="0,00" min="0" step="0.01" /></div>
+      <div class="form-group full"><label>Categoria *</label>
+        <select id="d-categoria">
+          <option value="pedagio">🛣️ Pedágio</option>
+          <option value="furos">🕳️ Furos (faltas)</option>
+          <option value="comissao">🤝 Comissão Extra</option>
+          <option value="diversos">📦 Diversos</option>
+          <option value="vendpago">💳 VendPago</option>
+          <option value="juros">💸 Juros</option>
+          <option value="refeicoes">🍽️ Refeições</option>
+          <option value="combustivel">⛽ Combustível</option>
+          <option value="manut_veiculo">🚗 Manutenção Veículo</option>
+          <option value="manut_gruas">🎮 Manutenção Gruas</option>
+          <option value="frete">📦 Frete</option>
+          <option value="diarias">🏨 Diárias</option>
+          <option value="imposto">🧾 Imposto</option>
+          <option value="funcionario">👷 Funcionário</option>
+          <option value="raspadinhas">🎰 Raspadinhas</option>
+          <option value="outros">➕ Outros</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Descrição *</label><input type="text" id="d-desc" placeholder="Ex: Combustível ACM..." /></div>
+    </div>
+    <div id="despesa-msg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="salvarDespesa()">✓ Salvar</button>
+      <button class="btn btn-ghost" onclick="fecharModal('modal-despesa')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PONTO -->
+<div class="modal-bg" id="modal-ponto">
+  <div class="modal">
+    <div class="modal-title" id="modal-ponto-title">Novo Ponto</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Nº Máquina</label><input type="number" id="p-num" placeholder="Ex: 57" /></div>
+      <div class="form-group"><label>Rota *</label>
+        <select id="p-rota">
+          <option value="">Selecionar...</option>
+          <option>PRUDE</option><option>IRATI</option><option>PG</option><option>GPVA</option><option>Outra</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Nome do Estabelecimento *</label><input type="text" id="p-nome" placeholder="Ex: ACM, Saviski Atacarejo..." /></div>
+      <div class="form-group"><label>% Comissão</label><input type="number" id="p-comissao" placeholder="Ex: 30" min="0" max="100" step="1" /></div>
+      <div class="form-group"><label>Status</label>
+        <select id="p-status">
+          <option value="ativo">✅ Ativo</option>
+          <option value="inativo">❌ Inativo</option>
+          <option value="pausado">⏸️ Pausado</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Configuração da Máquina</label><textarea id="p-config" placeholder="Ex: Prob: 17  Full Power: 36V  Weak Power: 13V  Grab height: 1.1Second"></textarea></div>
+      <div class="form-group full"><label>Observação</label><textarea id="p-obs" placeholder="Notas sobre o ponto..."></textarea></div>
+    </div>
+    <div id="ponto-msg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="salvarPonto()">✓ Salvar</button>
+      <button class="btn btn-ghost" onclick="fecharModal('modal-ponto')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PELÚCIA -->
+<div class="modal-bg" id="modal-pelucia">
+  <div class="modal">
+    <div class="modal-title">Nova Compra de Pelúcia</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Data *</label><input type="date" id="pel-data" /></div>
+      <div class="form-group"><label>Fornecedor *</label><input type="text" id="pel-forn" placeholder="Ex: Prem Machi, Mt Toys..." /></div>
+      <div class="form-group"><label>Quantidade *</label><input type="number" id="pel-quant" placeholder="0" min="1" step="1" oninput="calcCustoUnit()" /></div>
+      <div class="form-group"><label>Valor Total (R$) *</label><input type="number" id="pel-valor" placeholder="0,00" min="0" step="0.01" oninput="calcCustoUnit()" /></div>
+      <div class="form-group"><label>Frete (R$)</label><input type="number" id="pel-frete" placeholder="0,00" min="0" step="0.01" oninput="calcCustoUnit()" /></div>
+      <div class="form-group" style="background:var(--surface2);border-radius:var(--r-sm);padding:12px;justify-content:center;">
+        <div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase;margin-bottom:4px">Custo Unitário</div>
+        <div style="font-size:22px;font-weight:800;color:var(--accent2);font-family:'JetBrains Mono',monospace" id="pel-custo-calc">R$ 0,00</div>
+      </div>
+      <div class="form-group"><label>Nº NF</label><input type="text" id="pel-nf" placeholder="Ex: 4305" /></div>
+      <div class="form-group"><label>Valor NF (R$)</label><input type="number" id="pel-nfval" placeholder="0,00" min="0" step="0.01" /></div>
+      <div class="form-group full"><label>CNPJ / Observação</label><input type="text" id="pel-obs" placeholder="Ex: Arildo Clodoaldo Moreira - 05.355.980/0001-69" /></div>
+    </div>
+    <div id="pelucia-msg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="salvarPelucia()">✓ Salvar</button>
+      <button class="btn btn-ghost" onclick="fecharModal('modal-pelucia')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SALÁRIO -->
+<div class="modal-bg" id="modal-salario">
+  <div class="modal">
+    <div class="modal-title">Novo Pagamento</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Data *</label><input type="date" id="sal-data" /></div>
+      <div class="form-group"><label>Pessoa *</label>
+        <select id="sal-pessoa">
+          <option value="">Selecionar...</option>
+          <option value="GU">GU (Gustavo)</option>
+          <option value="GUI">GUI (Guilherme)</option>
+          <option value="JOACIR">Joacir</option>
+          <option value="OUTRO">Outro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Valor (R$) *</label><input type="number" id="sal-valor" placeholder="0,00" min="0" step="0.01" /></div>
+      <div class="form-group"><label>Tipo</label>
+        <select id="sal-tipo">
+          <option value="salario">Salário</option>
+          <option value="vale">Vale / Antecipação</option>
+          <option value="extra">Extra</option>
+          <option value="diaria">Diária</option>
+          <option value="imposto">Imposto</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Mês Referência</label><input type="month" id="sal-mes" /></div>
+      <div class="form-group full"><label>Observação</label><input type="text" id="sal-obs" placeholder="Ex: Restante salário Julho..." /></div>
+    </div>
+    <div id="salario-msg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="salvarSalario()">✓ Salvar</button>
+      <button class="btn btn-ghost" onclick="fecharModal('modal-salario')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD9pJPppo2_-CFuoGYDkUAIATRqhfb_gDU",
+  authDomain: "acm-crm-d20a4.firebaseapp.com",
+  projectId: "acm-crm-d20a4",
+  storageBucket: "acm-crm-d20a4.firebasestorage.app",
+  messagingSenderId: "119604708875",
+  appId: "1:119604708875:web:90acd436e09784c2ee290e"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+// STATE
+let fluxo = [], rotas = [], despesas = [], pontos = [], pelucias = [], salarios = [];
+let editingPontoId = null;
+
+// ── AUTH ──────────────────────────────────────────────────────────────────
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    document.getElementById('login-screen').classList.remove('visible');
+    await loadAll();
+    document.getElementById('app').classList.add('visible');
+    document.getElementById('loading-overlay').classList.add('hidden');
+    initDefaults();
+    renderDashboard();
+  } else {
+    document.getElementById('app').classList.remove('visible');
+    document.getElementById('login-screen').classList.add('visible');
+    document.getElementById('loading-overlay').classList.add('hidden');
+  }
+});
+
+window.fazerLogin = async () => {
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const err = document.getElementById('login-err');
+  err.classList.remove('visible');
+  try { await signInWithEmailAndPassword(auth, email, senha); }
+  catch(e) { err.classList.add('visible'); }
+};
+window.fazerLogout = async () => { await signOut(auth); };
+
+// ── SYNC ──────────────────────────────────────────────────────────────────
+function setSyncing(s) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-text');
+  if (s === 'saving') { dot.className = 'dot saving'; txt.textContent = 'salvando...'; }
+  else if (s === 'ok') { dot.className = 'dot'; txt.textContent = 'salvo'; }
+  else { dot.className = 'dot error'; txt.textContent = 'erro'; }
+}
+
+// ── FIRESTORE HELPERS ──────────────────────────────────────────────────────
+async function loadCollection(name) {
+  try {
+    const snap = await getDocs(collection(db, 'gruas_' + name));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e) { return []; }
+}
+async function saveDoc(col, data) {
+  setSyncing('saving');
+  try { await setDoc(doc(db, 'gruas_' + col, data.id), data); setSyncing('ok'); return true; }
+  catch(e) { setSyncing('error'); return false; }
+}
+async function deleteDoc2(col, id) {
+  setSyncing('saving');
+  try { await deleteDoc(doc(db, 'gruas_' + col, id)); setSyncing('ok'); }
+  catch(e) { setSyncing('error'); }
+}
+
+async function loadAll() {
+  [fluxo, rotas, despesas, pontos, pelucias, salarios] = await Promise.all([
+    loadCollection('fluxo'),
+    loadCollection('rotas'),
+    loadCollection('despesas'),
+    loadCollection('pontos'),
+    loadCollection('pelucias'),
+    loadCollection('salarios'),
+  ]);
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+const fmt = d => d instanceof Date ? d.toISOString().split('T')[0] : d;
+const fmtBR = s => { if(!s) return '—'; const [y,m,d] = s.split('-'); return `${d}/${m}/${y}`; };
+const fmtMes = s => { if(!s) return '—'; const [y,m] = s.split('-'); const ms=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; return `${ms[parseInt(m)-1]}/${y}`; };
+const fmtReal = v => 'R$ ' + Number(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+const mesAtual = () => new Date().toISOString().slice(0,7);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+
+const DESP_CATS = {
+  pedagio: {label:'Pedágio', icon:'🛣️'},
+  furos: {label:'Furos', icon:'🕳️'},
+  comissao: {label:'Comissão Extra', icon:'🤝'},
+  diversos: {label:'Diversos', icon:'📦'},
+  vendpago: {label:'VendPago', icon:'💳'},
+  juros: {label:'Juros', icon:'💸'},
+  refeicoes: {label:'Refeições', icon:'🍽️'},
+  combustivel: {label:'Combustível', icon:'⛽'},
+  manut_veiculo: {label:'Manutenção Veículo', icon:'🚗'},
+  manut_gruas: {label:'Manutenção Gruas', icon:'🎮'},
+  frete: {label:'Frete', icon:'📦'},
+  diarias: {label:'Diárias', icon:'🏨'},
+  imposto: {label:'Imposto', icon:'🧾'},
+  funcionario: {label:'Funcionário', icon:'👷'},
+  raspadinhas: {label:'Raspadinhas', icon:'🎰'},
+  outros: {label:'Outros', icon:'➕'},
+};
+
+function initDefaults() {
+  document.getElementById('f-data').value = fmt(new Date());
+  document.getElementById('r-data').value = fmt(new Date());
+  document.getElementById('d-data').value = fmt(new Date());
+  document.getElementById('pel-data').value = fmt(new Date());
+  document.getElementById('sal-data').value = fmt(new Date());
+  document.getElementById('fluxo-filter-mes').value = mesAtual();
+  document.getElementById('rota-filter-mes').value = mesAtual();
+  document.getElementById('desp-filter-mes').value = mesAtual();
+  document.getElementById('sal-filter-mes').value = mesAtual();
+  document.getElementById('sal-mes').value = mesAtual();
+  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'2-digit', month:'long', year:'numeric'});
+}
+
+// ── NAVIGATION ─────────────────────────────────────────────────────────────
+window.showPage = function(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  const renders = { dashboard: renderDashboard, fluxo: renderFluxo, rotas: renderRotas, despesas: renderDespesas, pontos: renderPontos, pelucias: renderPelucias, salarios: renderSalarios };
+  if (renders[name]) renders[name]();
+};
+
+window.fecharModal = id => document.getElementById(id).classList.remove('open');
+
+// ── CÁLCULO SALDO ──────────────────────────────────────────────────────────
+function getSaldo() {
+  return fluxo.reduce((acc, f) => f.tipo === 'entrada' ? acc + (f.valor||0) : acc - (f.valor||0), 0);
+}
+function getFluxoMes(mes) {
+  return fluxo.filter(f => f.data && f.data.startsWith(mes));
+}
+function getRotasMes(mes) {
+  return rotas.filter(r => r.data && r.data.startsWith(mes));
+}
+function getDespMes(mes) {
+  return despesas.filter(d => d.data && d.data.startsWith(mes));
+}
+
+// ── DASHBOARD ──────────────────────────────────────────────────────────────
+function renderDashboard() {
+  const mes = mesAtual();
+  const saldo = getSaldo();
+  const fluxoMes = getFluxoMes(mes);
+  const entMes = fluxoMes.filter(f=>f.tipo==='entrada').reduce((a,f)=>a+(f.valor||0),0);
+  const saiMes = fluxoMes.filter(f=>f.tipo==='saida').reduce((a,f)=>a+(f.valor||0),0);
+  const rotasMes = getRotasMes(mes);
+  const fatMes = rotasMes.reduce((a,r)=>a+(r.faturamento||0),0);
+  const lucroMes = rotasMes.reduce((a,r)=>a+(r.lucro||0),0);
+  const despMes = getDespMes(mes).reduce((a,d)=>a+(d.valor||0),0);
+
+  document.getElementById('dash-metrics').innerHTML = `
+    <div class="metric-card green"><div class="metric-label">Saldo Atual</div><div class="metric-value green">${fmtReal(saldo)}</div><div class="metric-sub">Caixa total</div></div>
+    <div class="metric-card blue"><div class="metric-label">Faturamento Mês</div><div class="metric-value blue">${fmtReal(fatMes)}</div><div class="metric-sub">Rotas ${mes}</div></div>
+    <div class="metric-card green"><div class="metric-label">Lucro Rotas</div><div class="metric-value green">${fmtReal(lucroMes)}</div><div class="metric-sub">Após comissão e pelúcia</div></div>
+    <div class="metric-card red"><div class="metric-label">Despesas Mês</div><div class="metric-value red">${fmtReal(despMes)}</div><div class="metric-sub">Gastos ${mes}</div></div>
+    <div class="metric-card green"><div class="metric-label">Entradas Mês</div><div class="metric-value green">${fmtReal(entMes)}</div></div>
+    <div class="metric-card red"><div class="metric-label">Saídas Mês</div><div class="metric-value red">${fmtReal(saiMes)}</div></div>
+    <div class="metric-card purple"><div class="metric-label">Pontos Ativos</div><div class="metric-value purple">${pontos.filter(p=>p.status==='ativo').length}</div><div class="metric-sub">de ${pontos.length} cadastrados</div></div>
+  `;
+
+  // Últimas movimentações
+  const ultFluxo = [...fluxo].sort((a,b)=>b.data.localeCompare(a.data)).slice(0,6);
+  document.getElementById('dash-fluxo-list').innerHTML = ultFluxo.length ? `
+    <table class="data-table">
+      <thead><tr><th>Data</th><th>Descrição</th><th>Valor</th></tr></thead>
+      <tbody>${ultFluxo.map(f=>`
+        <tr>
+          <td class="mono">${fmtBR(f.data)}</td>
+          <td>${f.descricao||'—'}</td>
+          <td class="mono ${f.tipo==='entrada'?'entrada':'saida'}">${f.tipo==='entrada'?'+':'-'}${fmtReal(f.valor)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : '<div class="empty"><div class="empty-icon">💰</div><div class="empty-text">Sem movimentações</div></div>';
+
+  // Rotas recentes
+  const ultRotas = [...rotas].sort((a,b)=>b.data.localeCompare(a.data)).slice(0,6);
+  document.getElementById('dash-rotas-list').innerHTML = ultRotas.length ? `
+    <table class="data-table">
+      <thead><tr><th>Data</th><th>Ponto</th><th>Lucro</th></tr></thead>
+      <tbody>${ultRotas.map(r=>`
+        <tr>
+          <td class="mono">${fmtBR(r.data)}</td>
+          <td>${r.estabelecimento||'—'}</td>
+          <td class="mono entrada">${fmtReal(r.lucro)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : '<div class="empty"><div class="empty-icon">🗺️</div><div class="empty-text">Sem rotas registradas</div></div>';
+
+  // Top pontos
+  const pontosAgg = {};
+  rotasMes.forEach(r => {
+    if(!r.estabelecimento) return;
+    if(!pontosAgg[r.estabelecimento]) pontosAgg[r.estabelecimento] = {fat:0, lucro:0, visitas:0};
+    pontosAgg[r.estabelecimento].fat += r.faturamento||0;
+    pontosAgg[r.estabelecimento].lucro += r.lucro||0;
+    pontosAgg[r.estabelecimento].visitas++;
+  });
+  const topPontos = Object.entries(pontosAgg).sort((a,b)=>b[1].fat-a[1].fat).slice(0,8);
+  document.getElementById('dash-pontos-list').innerHTML = topPontos.length ? `
+    <table class="data-table">
+      <thead><tr><th>Ponto</th><th>Visitas</th><th>Faturamento</th><th>Lucro</th></tr></thead>
+      <tbody>${topPontos.map(([nome,d])=>`
+        <tr>
+          <td><span style="font-weight:600">${nome}</span></td>
+          <td class="mono">${d.visitas}</td>
+          <td class="mono">${fmtReal(d.fat)}</td>
+          <td class="mono entrada">${fmtReal(d.lucro)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : '<div class="empty"><div class="empty-icon">📍</div><div class="empty-text">Nenhuma rota este mês</div></div>';
+}
+
+// ── FLUXO DE CAIXA ─────────────────────────────────────────────────────────
+window.salvarFluxo = async function() {
+  const tipo = document.getElementById('f-tipo').value;
+  const data = document.getElementById('f-data').value;
+  const valor = parseFloat(document.getElementById('f-valor').value)||0;
+  const desc = document.getElementById('f-desc').value.trim();
+  if(!data||!valor||!desc) { showMsg('fluxo-msg','Preencha data, valor e descrição.','err'); return; }
+  const item = { id: uid(), tipo, data, valor, descricao: desc, categoria: document.getElementById('f-categoria').value, criadoEm: new Date().toISOString() };
+  fluxo.push(item);
+  await saveDoc('fluxo', item);
+  showMsg('fluxo-msg','✓ Lançamento salvo!','ok');
+  limparFluxoForm();
+  renderFluxo();
+};
+
+window.limparFluxoForm = function() {
+  document.getElementById('f-valor').value = '';
+  document.getElementById('f-desc').value = '';
+  document.getElementById('f-data').value = fmt(new Date());
+  document.getElementById('fluxo-msg').innerHTML = '';
+};
+
+window.renderFluxo = function() {
+  const mes = document.getElementById('fluxo-filter-mes').value;
+  const tipo = document.getElementById('fluxo-filter-tipo').value;
+  const lista = fluxo.filter(f => (!mes || f.data.startsWith(mes)) && (!tipo || f.tipo === tipo))
+    .sort((a,b) => b.data.localeCompare(a.data));
+
+  const entradas = lista.filter(f=>f.tipo==='entrada').reduce((a,f)=>a+(f.valor||0),0);
+  const saidas = lista.filter(f=>f.tipo==='saida').reduce((a,f)=>a+(f.valor||0),0);
+  const saldo = getSaldo();
+  document.getElementById('fluxo-metrics').innerHTML = `
+    <div class="metric-card green"><div class="metric-label">Saldo Total</div><div class="metric-value green">${fmtReal(saldo)}</div></div>
+    <div class="metric-card green"><div class="metric-label">Entradas Filtro</div><div class="metric-value green">${fmtReal(entradas)}</div></div>
+    <div class="metric-card red"><div class="metric-label">Saídas Filtro</div><div class="metric-value red">${fmtReal(saidas)}</div></div>
+    <div class="metric-card ${entradas-saidas>=0?'green':'red'}"><div class="metric-label">Saldo Filtro</div><div class="metric-value ${entradas-saidas>=0?'green':'red'}">${fmtReal(entradas-saidas)}</div></div>
+  `;
+
+  if(!lista.length) { document.getElementById('fluxo-list').innerHTML='<div class="empty"><div class="empty-icon">💰</div><div class="empty-text">Nenhum lançamento</div></div>'; return; }
+  document.getElementById('fluxo-list').innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th></th></tr></thead>
+      <tbody>${lista.map(f=>`
+        <tr>
+          <td class="mono">${fmtBR(f.data)}</td>
+          <td><span class="badge ${f.tipo==='entrada'?'badge-green':'badge-red'}">${f.tipo==='entrada'?'ENTRADA':'SAÍDA'}</span></td>
+          <td>${f.descricao||'—'}</td>
+          <td style="color:var(--muted);font-size:12px">${f.categoria||'—'}</td>
+          <td class="mono ${f.tipo==='entrada'?'entrada':'saida'}" style="font-weight:700">${f.tipo==='entrada'?'+':'-'}${fmtReal(f.valor)}</td>
+          <td><button class="btn-icon btn-danger" onclick="excluirFluxo('${f.id}')">🗑</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+};
+
+window.excluirFluxo = async function(id) {
+  if(!confirm('Excluir este lançamento?')) return;
+  fluxo = fluxo.filter(f=>f.id!==id);
+  await deleteDoc2('fluxo', id);
+  renderFluxo();
+};
+
+// ── ROTAS ──────────────────────────────────────────────────────────────────
+window.abrirModalRota = function() {
+  document.getElementById('r-data').value = fmt(new Date());
+  document.getElementById('r-rota').value = '';
+  document.getElementById('r-fat').value = '';
+  document.getElementById('r-com').value = '';
+  document.getElementById('r-pel').value = '';
+  document.getElementById('r-custopel').value = '';
+  document.getElementById('r-reldin').value = '';
+  document.getElementById('r-relpel').value = '';
+  document.getElementById('r-sobra').value = '';
+  document.getElementById('r-obs').value = '';
+  document.getElementById('rota-msg').innerHTML = '';
+  document.getElementById('modal-rota-title').textContent = 'Nova Visita';
+  atualizarSelectPontos();
+  calcRotaLucro();
+  document.getElementById('modal-rota').classList.add('open');
+};
+
+function atualizarSelectPontos() {
+  const sel = document.getElementById('r-estabelecimento');
+  sel.innerHTML = '<option value="">Selecionar ponto...</option>' +
+    [...pontos].sort((a,b)=>a.nome.localeCompare(b.nome)).map(p=>`<option value="${p.nome}">${p.nome}${p.rota?' ('+p.rota+')':''}</option>`).join('') +
+    '<option value="__outro__">— Outro (digitar) —</option>';
+}
+
+window.calcRotaLucro = function() {
+  const fat = parseFloat(document.getElementById('r-fat').value)||0;
+  const com = parseFloat(document.getElementById('r-com').value)||0;
+  const pel = parseFloat(document.getElementById('r-pel').value)||0;
+  const custopel = parseFloat(document.getElementById('r-custopel').value)||0;
+  const lucro = fat - com - custopel;
+  const media = pel > 0 ? fat / pel : 0;
+  const pct = fat > 0 ? (com/fat*100) : 0;
+  document.getElementById('r-lucro-calc').textContent = fmtReal(lucro);
+  document.getElementById('r-media-calc').textContent = fmtReal(media);
+  document.getElementById('r-pct-calc').textContent = pct.toFixed(1) + '%';
+};
+
+window.salvarRota = async function() {
+  const data = document.getElementById('r-data').value;
+  const rota = document.getElementById('r-rota').value;
+  let estab = document.getElementById('r-estabelecimento').value;
+  if(estab === '__outro__') estab = prompt('Nome do estabelecimento:') || '';
+  const fat = parseFloat(document.getElementById('r-fat').value)||0;
+  const pel = parseInt(document.getElementById('r-pel').value)||0;
+  if(!data||!rota||!estab||!fat||!pel) { showMsg('rota-msg','Preencha data, rota, estabelecimento, faturamento e pelúcias.','err'); return; }
+  const com = parseFloat(document.getElementById('r-com').value)||0;
+  const custopel = parseFloat(document.getElementById('r-custopel').value)||0;
+  const lucro = fat - com - custopel;
+  const media = pel > 0 ? fat/pel : 0;
+  const item = {
+    id: uid(), data, rota, estabelecimento: estab, faturamento: fat, comissao: com,
+    pelucias: pel, custoPelucias: custopel, lucro, media,
+    relogioDinheiro: parseFloat(document.getElementById('r-reldin').value)||0,
+    relogioPelucias: parseFloat(document.getElementById('r-relpel').value)||0,
+    sobra: parseFloat(document.getElementById('r-sobra').value)||0,
+    obs: document.getElementById('r-obs').value.trim(),
+    criadoEm: new Date().toISOString()
+  };
+  rotas.push(item);
+  await saveDoc('rotas', item);
+  showMsg('rota-msg','✓ Visita salva!','ok');
+  setTimeout(()=>fecharModal('modal-rota'),800);
+  renderRotas();
+};
+
+window.renderRotas = function() {
+  const mes = document.getElementById('rota-filter-mes').value;
+  const rotaFilt = document.getElementById('rota-filter-rota').value;
+  const lista = rotas.filter(r => (!mes||r.data.startsWith(mes)) && (!rotaFilt||r.rota===rotaFilt))
+    .sort((a,b)=>b.data.localeCompare(a.data));
+
+  const fatTotal = lista.reduce((a,r)=>a+(r.faturamento||0),0);
+  const lucroTotal = lista.reduce((a,r)=>a+(r.lucro||0),0);
+  const pelTotal = lista.reduce((a,r)=>a+(r.pelucias||0),0);
+  document.getElementById('rota-summary').innerHTML = `
+    <div style="text-align:right"><div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase">Faturamento</div><div style="font-size:18px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--blue)">${fmtReal(fatTotal)}</div></div>
+    <div style="text-align:right"><div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase">Lucro</div><div style="font-size:18px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--green)">${fmtReal(lucroTotal)}</div></div>
+    <div style="text-align:right"><div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase">Pelúcias</div><div style="font-size:18px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--accent2)">${pelTotal}</div></div>
+  `;
+
+  if(!lista.length) { document.getElementById('rotas-list').innerHTML='<div class="empty"><div class="empty-icon">🗺️</div><div class="empty-text">Nenhuma visita registrada</div><div class="empty-sub">Clique em "+ Nova Visita" para começar</div></div>'; return; }
+
+  // Group by data+rota
+  const grupos = {};
+  lista.forEach(r => {
+    const key = r.data + '||' + r.rota;
+    if(!grupos[key]) grupos[key] = [];
+    grupos[key].push(r);
+  });
+
+  document.getElementById('rotas-list').innerHTML = Object.entries(grupos).map(([key, items]) => {
+    const [data, rota] = key.split('||');
+    const fatG = items.reduce((a,r)=>a+(r.faturamento||0),0);
+    const lucroG = items.reduce((a,r)=>a+(r.lucro||0),0);
+    const pelG = items.reduce((a,r)=>a+(r.pelucias||0),0);
+    const rotaColors = {PRUDE:'var(--blue)',IRATI:'var(--green)',PG:'var(--accent2)',GPVA:'var(--amber)'};
+    const cor = rotaColors[rota] || 'var(--muted)';
+    return `
+      <div class="card" style="margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:4px;height:40px;background:${cor};border-radius:2px;"></div>
+            <div>
+              <div style="font-size:15px;font-weight:700;">${fmtBR(data)}</div>
+              <div style="font-size:12px;color:${cor};font-weight:600;font-family:'JetBrains Mono',monospace;">${rota} · ${items.length} ponto${items.length>1?'s':''}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:24px;align-items:center;">
+            <div style="text-align:right"><div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;">FAT</div><div style="font-size:15px;font-weight:700;color:var(--blue);font-family:'JetBrains Mono',monospace;">${fmtReal(fatG)}</div></div>
+            <div style="text-align:right"><div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;">LUCRO</div><div style="font-size:15px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace;">${fmtReal(lucroG)}</div></div>
+            <div style="text-align:right"><div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;">PELÚCIAS</div><div style="font-size:15px;font-weight:700;color:var(--accent2);font-family:'JetBrains Mono',monospace;">${pelG}</div></div>
+          </div>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Estabelecimento</th><th>Faturamento</th><th>Comissão</th><th>Pelúcias</th><th>Média/Pel</th><th>Lucro</th><th>Sobra/Falta</th><th></th></tr></thead>
+          <tbody>${items.map(r=>`
+            <tr>
+              <td style="font-weight:600">${r.estabelecimento}</td>
+              <td class="mono">${fmtReal(r.faturamento)}</td>
+              <td class="mono" style="color:var(--muted)">${r.comissao?fmtReal(r.comissao):'—'}</td>
+              <td class="mono">${r.pelucias}</td>
+              <td class="mono" style="color:var(--accent2)">${fmtReal(r.media)}</td>
+              <td class="mono entrada" style="font-weight:700">${fmtReal(r.lucro)}</td>
+              <td class="mono ${r.sobra>=0?'entrada':'saida'}">${r.sobra?fmtReal(r.sobra):'—'}</td>
+              <td><button class="btn-icon btn-danger" onclick="excluirRota('${r.id}')">🗑</button></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }).join('');
+};
+
+window.excluirRota = async function(id) {
+  if(!confirm('Excluir esta visita?')) return;
+  rotas = rotas.filter(r=>r.id!==id);
+  await deleteDoc2('rotas', id);
+  renderRotas();
+};
+
+// ── DESPESAS ───────────────────────────────────────────────────────────────
+window.abrirModalDespesa = () => {
+  document.getElementById('d-data').value = fmt(new Date());
+  document.getElementById('d-valor').value = '';
+  document.getElementById('d-desc').value = '';
+  document.getElementById('despesa-msg').innerHTML = '';
+  document.getElementById('modal-despesa').classList.add('open');
+};
+
+window.salvarDespesa = async function() {
+  const data = document.getElementById('d-data').value;
+  const valor = parseFloat(document.getElementById('d-valor').value)||0;
+  const desc = document.getElementById('d-desc').value.trim();
+  if(!data||!valor||!desc) { showMsg('despesa-msg','Preencha todos os campos.','err'); return; }
+  const item = { id: uid(), data, valor, descricao: desc, categoria: document.getElementById('d-categoria').value, criadoEm: new Date().toISOString() };
+  despesas.push(item);
+  await saveDoc('despesas', item);
+  showMsg('despesa-msg','✓ Salvo!','ok');
+  setTimeout(()=>fecharModal('modal-despesa'),700);
+  renderDespesas();
+};
+
+window.renderDespesas = function() {
+  const mes = document.getElementById('desp-filter-mes').value;
+  const lista = despesas.filter(d=>!mes||d.data.startsWith(mes)).sort((a,b)=>b.data.localeCompare(a.data));
+  const totalMes = lista.reduce((a,d)=>a+(d.valor||0),0);
+
+  // categorias
+  const cats = {};
+  lista.forEach(d => {
+    const k = d.categoria||'outros';
+    if(!cats[k]) cats[k] = 0;
+    cats[k] += d.valor||0;
+  });
+
+  document.getElementById('desp-categorias').innerHTML = Object.entries(DESP_CATS).map(([k,v]) => {
+    const val = cats[k]||0;
+    return `<div class="desp-card ${val>0?'':'opacity-30'}" onclick="filtrarDespCat('${k}')">
+      <div class="desp-card-icon">${v.icon}</div>
+      <div class="desp-card-name">${v.label}</div>
+      <div class="desp-card-val">${fmtReal(val)}</div>
+    </div>`;
+  }).join('') + `<div class="desp-card" style="border-color:var(--red);grid-column:auto;">
+    <div class="desp-card-icon">📊</div>
+    <div class="desp-card-name">TOTAL MÊS</div>
+    <div class="desp-card-val">${fmtReal(totalMes)}</div>
+  </div>`;
+
+  document.getElementById('desp-list').innerHTML = lista.length ? `
+    <table class="data-table">
+      <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th></th></tr></thead>
+      <tbody>${lista.map(d=>`
+        <tr>
+          <td class="mono">${fmtBR(d.data)}</td>
+          <td><span style="font-size:13px">${DESP_CATS[d.categoria]?.icon||'📦'} ${DESP_CATS[d.categoria]?.label||d.categoria}</span></td>
+          <td>${d.descricao}</td>
+          <td class="mono saida" style="font-weight:700">${fmtReal(d.valor)}</td>
+          <td><button class="btn-icon btn-danger" onclick="excluirDespesa('${d.id}')">🗑</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Sem despesas neste mês</div></div>';
+};
+
+window.excluirDespesa = async function(id) {
+  if(!confirm('Excluir?')) return;
+  despesas = despesas.filter(d=>d.id!==id);
+  await deleteDoc2('despesas', id);
+  renderDespesas();
+};
+
+// ── PONTOS ─────────────────────────────────────────────────────────────────
+window.abrirModalPonto = function(id) {
+  editingPontoId = id || null;
+  const p = id ? pontos.find(x=>x.id===id) : null;
+  document.getElementById('modal-ponto-title').textContent = id ? 'Editar Ponto' : 'Novo Ponto';
+  document.getElementById('p-num').value = p?.numMaquina||'';
+  document.getElementById('p-nome').value = p?.nome||'';
+  document.getElementById('p-rota').value = p?.rota||'';
+  document.getElementById('p-comissao').value = p?.comissaoPct||'';
+  document.getElementById('p-status').value = p?.status||'ativo';
+  document.getElementById('p-config').value = p?.config||'';
+  document.getElementById('p-obs').value = p?.obs||'';
+  document.getElementById('ponto-msg').innerHTML = '';
+  document.getElementById('modal-ponto').classList.add('open');
+};
+
+window.salvarPonto = async function() {
+  const nome = document.getElementById('p-nome').value.trim();
+  const rota = document.getElementById('p-rota').value;
+  if(!nome||!rota) { showMsg('ponto-msg','Nome e rota são obrigatórios.','err'); return; }
+  const item = {
+    id: editingPontoId||uid(), nome, rota,
+    numMaquina: parseInt(document.getElementById('p-num').value)||null,
+    comissaoPct: parseFloat(document.getElementById('p-comissao').value)||0,
+    status: document.getElementById('p-status').value,
+    config: document.getElementById('p-config').value.trim(),
+    obs: document.getElementById('p-obs').value.trim(),
+  };
+  if(editingPontoId) { pontos = pontos.map(p=>p.id===editingPontoId?item:p); }
+  else pontos.push(item);
+  await saveDoc('pontos', item);
+  fecharModal('modal-ponto');
+  renderPontos();
+};
+
+window.renderPontos = function() {
+  const busca = (document.getElementById('ponto-search')?.value||'').toLowerCase();
+  const rotaFilt = document.getElementById('ponto-filter-rota').value;
+  const lista = pontos.filter(p=>
+    (!busca||p.nome.toLowerCase().includes(busca)||(p.rota||'').toLowerCase().includes(busca)) &&
+    (!rotaFilt||p.rota===rotaFilt)
+  ).sort((a,b)=>a.nome.localeCompare(b.nome));
+
+  const statusColors = {ativo:'badge-green',inativo:'badge-red',pausado:'badge-amber'};
+  const rotaColors = {PRUDE:'var(--blue)',IRATI:'var(--green)',PG:'var(--accent2)',GPVA:'var(--amber)'};
+  document.getElementById('pontos-list').innerHTML = lista.length ? `
+    <table class="data-table">
+      <thead><tr><th>Nº</th><th>Nome</th><th>Rota</th><th>Comissão</th><th>Status</th><th>Configuração</th><th></th></tr></thead>
+      <tbody>${lista.map(p=>`
+        <tr>
+          <td class="mono" style="color:var(--muted)">${p.numMaquina||'—'}</td>
+          <td style="font-weight:600">${p.nome}</td>
+          <td><span style="color:${rotaColors[p.rota]||'var(--muted)'};font-weight:600;font-family:'JetBrains Mono',monospace;font-size:12px">${p.rota}</span></td>
+          <td class="mono">${p.comissaoPct?p.comissaoPct+'%':'—'}</td>
+          <td><span class="badge ${statusColors[p.status]||'badge-blue'}">${p.status}</span></td>
+          <td style="font-size:12px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.config||'—'}</td>
+          <td style="display:flex;gap:6px;">
+            <button class="btn-icon" onclick="abrirModalPonto('${p.id}')">✏️</button>
+            <button class="btn-icon btn-danger" onclick="excluirPonto('${p.id}')">🗑</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : '<div class="empty"><div class="empty-icon">📍</div><div class="empty-text">Nenhum ponto cadastrado</div></div>';
+};
+
+window.excluirPonto = async function(id) {
+  if(!confirm('Excluir este ponto?')) return;
+  pontos = pontos.filter(p=>p.id!==id);
+  await deleteDoc2('pontos', id);
+  renderPontos();
+};
+
+// ── PELÚCIAS ───────────────────────────────────────────────────────────────
+window.abrirModalPelucia = () => {
+  document.getElementById('pel-data').value = fmt(new Date());
+  ['pel-forn','pel-quant','pel-valor','pel-frete','pel-nf','pel-nfval','pel-obs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('pel-custo-calc').textContent = 'R$ 0,00';
+  document.getElementById('pelucia-msg').innerHTML = '';
+  document.getElementById('modal-pelucia').classList.add('open');
+};
+
+window.calcCustoUnit = function() {
+  const quant = parseFloat(document.getElementById('pel-quant').value)||0;
+  const valor = parseFloat(document.getElementById('pel-valor').value)||0;
+  const frete = parseFloat(document.getElementById('pel-frete').value)||0;
+  const unit = quant > 0 ? (valor + frete) / quant : 0;
+  document.getElementById('pel-custo-calc').textContent = fmtReal(unit);
+};
+
+window.salvarPelucia = async function() {
+  const data = document.getElementById('pel-data').value;
+  const forn = document.getElementById('pel-forn').value.trim();
+  const quant = parseInt(document.getElementById('pel-quant').value)||0;
+  const valor = parseFloat(document.getElementById('pel-valor').value)||0;
+  if(!data||!forn||!quant||!valor) { showMsg('pelucia-msg','Preencha data, fornecedor, quantidade e valor.','err'); return; }
+  const frete = parseFloat(document.getElementById('pel-frete').value)||0;
+  const custoUnit = quant > 0 ? (valor + frete) / quant : 0;
+  const item = {
+    id: uid(), data, fornecedor: forn, quantidade: quant, valor, frete, custoUnitario: custoUnit,
+    nfNumero: document.getElementById('pel-nf').value.trim(),
+    nfValor: parseFloat(document.getElementById('pel-nfval').value)||0,
+    obs: document.getElementById('pel-obs').value.trim(),
+    criadoEm: new Date().toISOString()
+  };
+  pelucias.push(item);
+  await saveDoc('pelucias', item);
+  showMsg('pelucia-msg','✓ Compra salva!','ok');
+  setTimeout(()=>fecharModal('modal-pelucia'),700);
+  renderPelucias();
+};
+
+window.renderPelucias = function() {
+  const lista = [...pelucias].sort((a,b)=>b.data.localeCompare(a.data));
+  const totalQuant = lista.reduce((a,p)=>a+(p.quantidade||0),0);
+  const totalValor = lista.reduce((a,p)=>a+(p.valor||0),0);
+  const totalFrete = lista.reduce((a,p)=>a+(p.frete||0),0);
+  const custoMedio = totalQuant > 0 ? (totalValor+totalFrete)/totalQuant : 0;
+  document.getElementById('pelucia-metrics').innerHTML = `
+    <div class="metric-card blue"><div class="metric-label">Total Comprado</div><div class="metric-value blue">${totalQuant.toLocaleString('pt-BR')}</div><div class="metric-sub">pelúcias</div></div>
+    <div class="metric-card red"><div class="metric-label">Total Investido</div><div class="metric-value red">${fmtReal(totalValor+totalFrete)}</div></div>
+    <div class="metric-card amber"><div class="metric-label">Custo Médio</div><div class="metric-value amber">${fmtReal(custoMedio)}</div><div class="metric-sub">por pelúcia</div></div>
+    <div class="metric-card purple"><div class="metric-label">Compras</div><div class="metric-value purple">${lista.length}</div><div class="metric-sub">registros</div></div>
+  `;
+  document.getElementById('pelucias-list').innerHTML = lista.length ? `
+    <table class="data-table">
+      <thead><tr><th>Data</th><th>Fornecedor</th><th>Qtd</th><th>Valor</th><th>Frete</th><th>Custo Unit.</th><th>NF</th><th></th></tr></thead>
+      <tbody>${lista.map(p=>`
+        <tr>
+          <td class="mono">${fmtBR(p.data)}</td>
+          <td style="font-weight:600">${p.fornecedor}</td>
+          <td class="mono">${(p.quantidade||0).toLocaleString('pt-BR')}</td>
+          <td class="mono">${fmtReal(p.valor)}</td>
+          <td class="mono" style="color:var(--muted)">${p.frete?fmtReal(p.frete):'—'}</td>
+          <td class="mono" style="color:var(--accent2);font-weight:700">${fmtReal(p.custoUnitario)}</td>
+          <td style="font-size:12px;color:var(--muted)">${p.nfNumero||'—'}</td>
+          <td><button class="btn-icon btn-danger" onclick="excluirPelucia('${p.id}')">🗑</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : '<div class="empty"><div class="empty-icon">🧸</div><div class="empty-text">Nenhuma compra registrada</div></div>';
+};
+
+window.excluirPelucia = async function(id) {
+  if(!confirm('Excluir?')) return;
+  pelucias = pelucias.filter(p=>p.id!==id);
+  await deleteDoc2('pelucias', id);
+  renderPelucias();
+};
+
+// ── SALÁRIOS ───────────────────────────────────────────────────────────────
+window.abrirModalSalario = () => {
+  document.getElementById('sal-data').value = fmt(new Date());
+  document.getElementById('sal-mes').value = mesAtual();
+  ['sal-valor','sal-obs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('salario-msg').innerHTML = '';
+  document.getElementById('modal-salario').classList.add('open');
+};
+
+window.salvarSalario = async function() {
+  const data = document.getElementById('sal-data').value;
+  const pessoa = document.getElementById('sal-pessoa').value;
+  const valor = parseFloat(document.getElementById('sal-valor').value)||0;
+  if(!data||!pessoa||!valor) { showMsg('salario-msg','Preencha data, pessoa e valor.','err'); return; }
+  const item = {
+    id: uid(), data, pessoa, valor,
+    tipo: document.getElementById('sal-tipo').value,
+    mesRef: document.getElementById('sal-mes').value,
+    obs: document.getElementById('sal-obs').value.trim(),
+    criadoEm: new Date().toISOString()
+  };
+  salarios.push(item);
+  await saveDoc('salarios', item);
+  showMsg('salario-msg','✓ Pagamento salvo!','ok');
+  setTimeout(()=>fecharModal('modal-salario'),700);
+  renderSalarios();
+};
+
+window.renderSalarios = function() {
+  const mes = document.getElementById('sal-filter-mes').value;
+  const lista = salarios.filter(s=>!mes||s.data.startsWith(mes)).sort((a,b)=>b.data.localeCompare(a.data));
+  const pessoas = ['GU','GUI','JOACIR'];
+  const totais = {};
+  pessoas.forEach(p => totais[p] = lista.filter(s=>s.pessoa===p).reduce((a,s)=>a+(s.valor||0),0));
+  document.getElementById('sal-metrics').innerHTML = pessoas.map(p=>`
+    <div class="metric-card purple"><div class="metric-label">${p}</div><div class="metric-value purple">${fmtReal(totais[p])}</div><div class="metric-sub">no período</div></div>
+  `).join('');
+
+  const pessoaColors = {GU:'var(--blue)',GUI:'var(--green)',JOACIR:'var(--amber)',OUTRO:'var(--muted)'};
+  document.getElementById('salarios-list').innerHTML = lista.length ? `
+    <table class="data-table">
+      <thead><tr><th>Data</th><th>Pessoa</th><th>Tipo</th><th>Mês Ref.</th><th>Valor</th><th>Obs</th><th></th></tr></thead>
+      <tbody>${lista.map(s=>`
+        <tr>
+          <td class="mono">${fmtBR(s.data)}</td>
+          <td style="font-weight:700;color:${pessoaColors[s.pessoa]||'var(--muted)'}">${s.pessoa}</td>
+          <td><span class="badge badge-purple">${s.tipo}</span></td>
+          <td class="mono">${s.mesRef?fmtMes(s.mesRef):'—'}</td>
+          <td class="mono" style="font-weight:700;color:var(--red)">${fmtReal(s.valor)}</td>
+          <td style="font-size:12px;color:var(--muted)">${s.obs||'—'}</td>
+          <td><button class="btn-icon btn-danger" onclick="excluirSalario('${s.id}')">🗑</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : '<div class="empty"><div class="empty-icon">👤</div><div class="empty-text">Nenhum pagamento neste período</div></div>';
+};
+
+window.excluirSalario = async function(id) {
+  if(!confirm('Excluir?')) return;
+  salarios = salarios.filter(s=>s.id!==id);
+  await deleteDoc2('salarios', id);
+  renderSalarios();
+};
+
+// ── UTILS ──────────────────────────────────────────────────────────────────
+function showMsg(elId, txt, tipo) {
+  const el = document.getElementById(elId);
+  el.className = 'form-msg ' + tipo;
+  el.textContent = txt;
+  if(tipo==='ok') setTimeout(()=>{el.innerHTML='';el.className='';},4000);
+}
+</script>
+</body>
+</html>
